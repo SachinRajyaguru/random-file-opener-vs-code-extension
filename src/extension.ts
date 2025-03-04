@@ -1,82 +1,78 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { getScriptFiles } from "./getScriptFiles";
 
-let workspaceRoot = vscode.workspace.rootPath;
-var scriptFiles = getScriptFiles(workspaceRoot, []);
+let scriptFiles: vscode.Uri[] = [];
+const randomIndices: number[] = [];
+let intervalId: NodeJS.Timeout | undefined = undefined;
 
-const randomIndeies = [];
+// Function to fetch script files dynamically
+async function updateScriptFiles() {
+  scriptFiles = await vscode.workspace.findFiles("**/*");
+}
 
+// Function to close all saved documents
 async function closeAllSavedTextDocuments() {
-  const documents = vscode.workspace.textDocuments;
+  const editors = vscode.window.visibleTextEditors;
 
-  for (const document of documents) {
-    if (!document.isDirty) {
-      await vscode.commands.executeCommand(
-        "workbench.action.closeActiveEditor"
-      );
+  for (const editor of editors) {
+    if (!editor.document.isDirty) {
+      await vscode.window.showTextDocument(editor.document);
+      await vscode.commands.executeCommand("workbench.action.closeActiveEditor");
     }
   }
 }
 
-const showTextDocument = () => {
-  if (randomIndeies.length >= 10) {
-    randomIndeies.length = 0;
-    closeAllSavedTextDocuments();
+// Function to show a random file
+async function showTextDocument() {
+  if (scriptFiles.length === 0) {
+    await updateScriptFiles();
   }
 
-  let randomFileIndex = Math.floor(Math.random() * scriptFiles.length);
-  randomIndeies.push(randomFileIndex);
-  vscode.workspace
-    .openTextDocument(scriptFiles[randomFileIndex])
-    .then((doc) => {
-      vscode.window.showTextDocument(doc);
-    });
-};
+  if (randomIndices.length >= 10) {
+    randomIndices.length = 0;
+    await closeAllSavedTextDocuments();
+  }
 
-var id: ReturnType<typeof setInterval> | undefined = undefined;
+  const randomFileIndex = Math.floor(Math.random() * scriptFiles.length);
+  randomIndices.push(randomFileIndex);
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
+  const doc = await vscode.workspace.openTextDocument(scriptFiles[randomFileIndex]);
+  vscode.window.showTextDocument(doc);
+}
+
+// Extension activation
 export function activate(context: vscode.ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with registerCommand
-  // The commandId parameter must match the command field in package.json
-  let disposable = vscode.commands.registerCommand(
-    "randomfileopener.openRandomFile",
-    async () => {
-      if (typeof id !== "undefined") {
-        clearInterval(id);
-      }
-
-      const LIST = 10;
-      const GAP = 2;
-
-      const arrOfminutes = Array(LIST)
-        .fill(0)
-        .map((x, index) => `${index + GAP}`);
-
-      vscode.window.showQuickPick(arrOfminutes).then((item) => {
-        if (item) {
-          id = setInterval(showTextDocument, parseInt(item) * 1000 * 60);
-        }
-      });
+  vscode.commands.registerCommand("randomfileopener.openRandomFile", async () => {
+    if (intervalId) {
+      clearInterval(intervalId);
     }
-  );
+
+    await updateScriptFiles();
+
+    const LIST = 10;
+    const GAP = 2;
+    const arrOfMinutes = Array.from({ length: LIST }, (_, i) => `${i + GAP}`);
+
+    vscode.window.showQuickPick(arrOfMinutes, { placeHolder: "Select interval in minutes" }).then((item) => {
+      if (item) {
+        intervalId = setInterval(showTextDocument, parseInt(item) * 60 * 1000);
+      }
+    });
+  });
 
   vscode.commands.registerCommand("randomfileopener.stopOpenFile", () => {
-    if (typeof id !== "undefined") {
-      console.log(JSON.stringify(`clearInterval(${id})`, null, 2));
-      clearInterval(id);
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = undefined;
+      vscode.window.showInformationMessage("Stopped opening random files.");
     }
   });
 
-  context.subscriptions.push(disposable);
+  context.subscriptions.push();
 }
 
-// this method is called when your extension is deactivated
-export function deactivate() {}
+// Extension deactivation
+export function deactivate() {
+  if (intervalId) {
+    clearInterval(intervalId);
+  }
+}
