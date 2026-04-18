@@ -11,7 +11,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "build": "VERSION=$(node -p \"new Date().toISOString().slice(0, 10).replace(/-/g, '.')\") && npm run compile && npm run lint"
+    "build": "VERSION=$(node -p \"new Date().toISOString().slice(0, 16).replace(/[-T:]/g, '.')\") && npm run compile && npm run lint"
   },
   "engines": {
     "vscode": "^1.74.0"
@@ -29,25 +29,29 @@
     "commands": [
       {
         "command": "randomfileopener.openRandomFile",
-        "title": "Open Random File",
-        "key": "ctrl+shift+c",
-        "mac": "cmd+shift+c"
+        "title": "Random File Opener: Start (default 2s)"
+      },
+      {
+        "command": "randomfileopener.openRandomFilePick",
+        "title": "Random File Opener: Start (pick interval)"
       },
       {
         "command": "randomfileopener.stopOpenFile",
-        "title": "Stop Random File"
+        "title": "Random File Opener: Stop"
       }
     ],
     "keybindings": [
       {
-        "command": "randomfileopener.openRandomFile",
-        "when": "editorTextFocus"
+        "command": "randomfileopener.openRandomFilePick",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorFocus"
       },
       {
         "command": "randomfileopener.stopOpenFile",
-        "key": "ctrl+shift+alt+\\",
-        "mac": "cmd+shift+alt+\\",
-        "when": "editorTextFocus"
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "editorFocus"
       }
     ]
   },
